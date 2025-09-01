@@ -1,3 +1,6 @@
-from django.shortcuts import render
+from django.http import JsonResponse
+from .logger import Log
 
-# Create your views here.
+def test_view(request):
+    Log("backend", "debug", "handler", "test_view triggered")
+    return JsonResponse({"message": "Logging middleware works!"})

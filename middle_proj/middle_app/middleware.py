@@ -1,31 +1,23 @@
-import requests
-from django.conf import settings
+from .logger import Log
+import time
 
-LOG_API_URL = "http://20.244.56.144/evaluation-service/logs"
+class LoggingMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
 
-STACKS = ["backend", "frontend"]
-LEVELS = ["debug", "info","warn", "error","fatal"]
-PACKAGE =["cache","controller","cron_job", "db", "domain", "handler", "repository","route",  "service"]
-BOTH_PACKAGES = ["auth", "config","middleware","utils"]
+    def __call__(self, request):
 
+        Log("backend", "info", "middleware", f"Request started: {request.method} {request.path}")
 
+        start_time = time.time()
+        try:
+            response = self.get_response(request)
+        except Exception as e:
 
-def Log(stack: str, level: str, package: str, message: str):
-    if stack not in STACKS:
-        raise ValueError(f"Invalid stack: {stack}. Must be one of {STACKS}")
-    if level not in LEVELS:
-        raise ValueError(f"Invalid level: {level}. Must be one of {LEVELS}")
-    if package not in PACKAGE and package not in BOTH_PACKAGES:
-        raise ValueError(f"Invalid package: {package}. Must be one of {PACKAGE} or {BOTH_PACKAGES}")
+            Log("backend", "error", "middleware", f"Exception: {str(e)}")
+            raise
 
-    payload = {
-        "stack": stack,
-        "level": level,
-        "package": package,
-        "message": message
-    }
-    try:
-        response = requests.post(LOG_API_URL, json=payload, headers=headers)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        print(f"Failed to send log: {e}")
+        duration = (time.time() - start_time) * 1000
+        Log("backend", "info", "middleware", f"Request completed: {request.method} {request.path} in {duration:.2f}ms")
+
+        return response
